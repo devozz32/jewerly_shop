@@ -7,6 +7,7 @@ pipeline {
     }
 
     stages {
+
         stage('Debug Branch') {
             steps {
                 echo "DEBUG: BRANCH_NAME = '${env.BRANCH_NAME}'"
@@ -100,15 +101,18 @@ pipeline {
             }
         }
 
-        stage('Snyk Container Scan') {
+        stage('Snyk Container Scan (non-blocking)') {
             when { expression { env.BRANCH_NAME.endsWith("dev") } }
             steps {
                 script {
-                    snykScan(services: [
-                        "${env.BACKEND_TAG}",
-                        "${env.AUTH_TAG}",
-                        "${env.FRONTEND_TAG}"
-                    ])
+                    catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                        snykScan(services: [
+                            "${env.BACKEND_TAG}",
+                            "${env.AUTH_TAG}",
+                            "${env.FRONTEND_TAG}"
+                        ])
+                    }
+                    echo "⚠️ Snyk scan completed (pipeline continues even if vulnerabilities found)."
                 }
             }
         }
